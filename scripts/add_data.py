@@ -5,7 +5,7 @@ from typing import List, Dict, Tuple
 import pandas as pd
 
 # Hindi NLP
-import stanza
+import stanza as download_stanza
 from indic_transliteration import sanscript
 from indic_transliteration.sanscript import transliterate
 import stopwordsiso as stopiso
@@ -40,7 +40,7 @@ NUM_RE   = re.compile(r"^\d+(?:[.,]\d+)?$")
 PUNCT_RE = re.compile(r"^\W+$")
 
 # Build NLP pipelines
-_HI_NLP = stanza.Pipeline(
+_HI_NLP = download_stanza.Pipeline(
     lang="hi",
     processors="tokenize,pos,lemma",
     use_gpu=False,
@@ -73,7 +73,7 @@ def tag_hindi(hi_tokens: List[str]) -> List[Dict]:
     doc = _HI_NLP(hi_text)
 
     # Collect words in order
-    words: List[stanza.models.common.doc.Word] = []
+    words: List[download_stanza.models.common.doc.Word] = []
     for sent in doc.sentences:
         words.extend(sent.words)
 
