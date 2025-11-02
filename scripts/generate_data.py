@@ -61,8 +61,13 @@ while True:
     specficiations += "simulate a natural billingual conversation, "
     specficiations += "structure the result conversation to only include periods at the end of a sentence, "
     specficiations += "only return the conversation, have it in a format similar to speaker: sentence, do not include anything else."
-    specficiations += "Only code switch in approximately 1 out of 3 sentences."
-    specficiations += "generate all hindi words using the english alphabet"            
+    specficiations += "IMPORTANT: Only code switch in EXACTLY 1 out of 4 sentences (25% of sentences should have Hindi). "
+    specficiations += "This means 3 sentences should be pure English, then 1 sentence with Hindi mixed in. "
+    specficiations += "Do NOT code switch more frequently than this ratio. "
+    specficiations += "generate all hindi words using the the devangari"
+    specficiations += "one example is Person1: Hey there, I hope everything is going well and <Hindi>आप कैसे हैं</Hindi> I heard the midterm on searching algorithms is next week."
+    specficiations += "ensure to ONLY USE DEVANGARI and not romanized hindi"
+  
     
     people = [
         "software engineer at Microsoft",
