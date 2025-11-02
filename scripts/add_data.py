@@ -26,14 +26,45 @@ def is_dev_char(ch: str) -> bool:
 def is_devanagari(s: str) -> bool:
     return any(is_dev_char(c) for c in s)
 
-# Tokenizer: keep word-like, numbers, Devanagari spans, and single punctuation symbols.
-# This preserves original order so we can re-insert processed outputs correctly.
+# --- Strip <Hindi> tags (case-insensitive, with/without attributes) ---
+LANG_TAG_RE = re.compile(r'</?\s*hindi\b[^>]*>', flags=re.I)
+
+def strip_hindi_tags(text: str) -> str:
+    return LANG_TAG_RE.sub('', text)
+
+# --- Big-O (capture & normalize) ---
+# Make sure O(log n) is one token, regardless of spaces/case inside.
+BIGO_TOKEN_RE = r"[Oo]\s*\(\s*log\s+[A-Za-z0-9]+\s*\)"  # e.g., O(log n), o ( log N )
+BIGO_NORMALIZE_INNER_SPACES_RE = re.compile(r"\s+")
+
+def is_big_o(tok: str) -> bool:
+    return re.fullmatch(BIGO_TOKEN_RE, tok) is not None
+
+def normalize_big_o(tok: str) -> str:
+    # Force leading 'O', remove extra spaces after 'O', squash inner spaces to single,
+    # then remove spaces right after '(' and before ')'
+    # Examples:
+    #  "o ( log   n )" -> "O(log n)"
+    tok = tok.strip()
+    # Uppercase the initial 'O'
+    tok = re.sub(r'^[oO]\s*\(', 'O(', tok)
+    # Condense internal runs of whitespace
+    inside = tok[2:-1] if tok.startswith('O(') and tok.endswith(')') else tok
+    inside = BIGO_NORMALIZE_INNER_SPACES_RE.sub(' ', inside)
+    return f"O({inside})" if tok.startswith('O(') and tok.endswith(')') else tok
+
+# Tokenizer:
+#  - Big-O pattern FIRST to keep "O(log n)" as ONE TOKEN
+#  - Keep Devanagari spans
+#  - English word possibly with apostrophes and hyphenated segments kept together
+#  - Numbers, URLs, single punctuation symbols
 TOK_RE = re.compile(
-    r"[\u0900-\u097F]+|"              # Devanagari span
-    r"[A-Za-z]+(?:'[A-Za-z]+)?|"      # English word (with optional apostrophe segment)
-    r"\d+(?:[.,]\d+)?|"               # number
-    r"https?://\S+|www\.\S+|"         # URLs
-    r"[^\s\w]"                        # single non-space, non-word char (punct, emoji, symbols)
+    rf"{BIGO_TOKEN_RE}|"                 # Big-O as a single token
+    r"[\u0900-\u097F]+|"                # Devanagari span
+    r"[A-Za-z]+(?:'[A-Za-z]+)?(?:-[A-Za-z]+)*|"  # English word + optional apostrophe + hyphens
+    r"\d+(?:[.,]\d+)?|"                 # number
+    r"https?://\S+|www\.\S+|"           # URLs
+    r"[^\s\w]"                          # single non-space, non-word char (punct, emoji, symbols)
 )
 
 NUM_RE   = re.compile(r"^\d+(?:[.,]\d+)?$")
@@ -77,8 +108,6 @@ def tag_hindi(hi_tokens: List[str]) -> List[Dict]:
     for sent in doc.sentences:
         words.extend(sent.words)
 
-    # Stanza will re-tokenize Hindi; in most cases the sequential order matches the token list we built.
-    # We align by order (zip). If lengths differ, zip will truncate extra tokens.
     for orig_tok, w in zip(hi_tokens, words):
         lemma_dev = w.lemma or w.text
         pos = w.upos or "X"
@@ -104,6 +133,7 @@ def tag_english(en_tokens: List[str]) -> List[Dict]:
     Output: list of dicts in order:
         orig_en, token_en, lemma_en, pos, lang='en', drop (bool)
     We remove stopwords by *lemma (lowercased)*.
+    Also normalizes Big-O tokens to canonical 'O(log n)' form.
     """
     out = []
     if not en_tokens:
@@ -112,16 +142,30 @@ def tag_english(en_tokens: List[str]) -> List[Dict]:
     en_text = " ".join(en_tokens)
     doc = _EN_NLP(en_text)
 
-    # spaCy will tokenize again; align by order with the provided words (skip spaces)
     toks = [t for t in doc if not t.is_space]
 
     for orig_tok, t in zip(en_tokens, toks):
-        if not (t.is_alpha or t.like_num):
-            # Skip weird tokens here; punctuation handled outside
-            lemma = t.lemma_.lower() if t.lemma_ else t.text.lower()
+        surface = t.text
+
+        # Preserve/normalize Big-O as a unit
+        if is_big_o(surface):
+            tok_norm = normalize_big_o(surface)
             out.append({
                 "orig_en": orig_tok,
-                "token_en": t.text,
+                "token_en": tok_norm,
+                "lemma_en": tok_norm,   # treat Big-O as a fixed form
+                "pos": "SYM",
+                "lang": "en",
+                "drop": False
+            })
+            continue
+
+        if not (t.is_alpha or t.like_num or '-' in surface):
+            # Non standard token (urls/punct handled elsewhere), just pass through
+            lemma = t.lemma_.lower() if t.lemma_ else surface.lower()
+            out.append({
+                "orig_en": orig_tok,
+                "token_en": surface,
                 "lemma_en": lemma,
                 "pos": t.pos_ or "X",
                 "lang": "en",
@@ -129,13 +173,17 @@ def tag_english(en_tokens: List[str]) -> List[Dict]:
             })
             continue
 
-        lemma = (t.lemma_ or t.text).lower()
-        drop = (t.is_alpha and lemma in _EN_STOP)
+        # Lemmatize; keep hyphenated compounds as-is for token,
+        # lemma from spaCy (lowercased). We do NOT split hyphenated forms.
+        lemma = (t.lemma_ or surface).lower()
+
+        # Stopword removal by lemma (only for pure alphabetic words)
+        drop = (surface.replace('-', '').isalpha() and lemma in _EN_STOP)
 
         out.append({
             "orig_en": orig_tok,
-            "token_en": t.text,
-            "lemma_en": lemma,
+            "token_en": surface,
+            "lemma_en": lemma if not is_big_o(surface) else normalize_big_o(surface),
             "pos": t.pos_ or "X",
             "lang": "en",
             "drop": drop
@@ -150,27 +198,30 @@ def tag_english(en_tokens: List[str]) -> List[Dict]:
 def process_utterance(utt: str) -> Dict[str, List]:
     """
     For a single utterance:
-      1) Tokenize preserving order (words, numbers, punct).
-      2) Collect Hindi-only and English-only word tokens (in order).
-      3) Tag each group separately (Hindi via Stanza, English via spaCy).
-      4) Reconstruct the final stream in original order:
-            - Replace Hindi words with processed (drop if stopword).
-            - Replace English words with processed (drop if stopword).
-            - Keep numbers/punct/others with simple tags.
+      - Strip <Hindi> tags
+      - Tokenize preserving order (words, numbers, punct), with special handling:
+          * Big-O kept as single token and normalized
+          * Hyphenated English words kept as single tokens
+      - Tag Hindi (Stanza) and English (spaCy) separately
+      - Reconstruct final stream in original order (drop stopwords)
     Returns dict with lists: tokens, lemmas, pos_tags, token_languages
     (All ASCII; Hindi transliterated to SLP1)
     """
+    # 0) Remove language tags
+    utt = strip_hindi_tags(utt)
+
+    # 1) Tokenize
     raw_toks = TOK_RE.findall(utt)
 
-    # Sequences for in-language tagging
+    # 2) Prepare language-specific sequences
     hi_seq = [t for t in raw_toks if is_devanagari(t)]
-    en_seq = [t for t in raw_toks if (not is_devanagari(t) and re.match(r"^[A-Za-z]", t))]
+    en_seq = [t for t in raw_toks if (not is_devanagari(t) and re.match(r"^[A-Za-z]", t)) or is_big_o(t)]
 
-    # Tagging
+    # 3) Tagging
     hi_tagged = tag_hindi(hi_seq)
     en_tagged = tag_english(en_seq)
 
-    # Pointers for sequential consumption
+    # 4) Reconstruct
     hi_i = 0
     en_i = 0
 
@@ -182,7 +233,7 @@ def process_utterance(utt: str) -> Dict[str, List]:
     for tok in raw_toks:
         if is_devanagari(tok):
             if hi_i >= len(hi_tagged):
-                # Fallback: include raw transliteration as unknown
+                # Fallback
                 final_tokens.append(transliterate(tok, sanscript.DEVANAGARI, sanscript.SLP1))
                 final_lemmas.append(transliterate(tok, sanscript.DEVANAGARI, sanscript.SLP1))
                 final_pos.append("X")
@@ -190,28 +241,32 @@ def process_utterance(utt: str) -> Dict[str, List]:
             else:
                 item = hi_tagged[hi_i]; hi_i += 1
                 if item["drop"]:
-                    # Drop Hindi stopword
                     continue
                 final_tokens.append(item["token_slp1"])
                 final_lemmas.append(item["lemma_slp1"])
                 final_pos.append(item["pos"])
                 final_langs.append("hi")
 
-        elif re.match(r"^[A-Za-z]", tok):
+        elif is_big_o(tok) or re.match(r"^[A-Za-z]", tok):
             if en_i >= len(en_tagged):
-                # Fallback: include as unknown
-                final_tokens.append(tok)
-                final_lemmas.append(tok.lower())
-                final_pos.append("X")
+                # Fallback
+                tok_out = normalize_big_o(tok) if is_big_o(tok) else tok
+                final_tokens.append(tok_out)
+                final_lemmas.append(tok_out.lower() if not is_big_o(tok_out) else tok_out)
+                final_pos.append("SYM" if is_big_o(tok_out) else "X")
                 final_langs.append("en")
             else:
                 item = en_tagged[en_i]; en_i += 1
                 if item["drop"]:
-                    # Drop English stopword
                     continue
-                final_tokens.append(item["token_en"])
-                final_lemmas.append(item["lemma_en"])
-                final_pos.append(item["pos"])
+                # Normalize Big-O once more for safety
+                tok_out = normalize_big_o(item["token_en"]) if is_big_o(item["token_en"]) else item["token_en"]
+                lem_out = item["lemma_en"]
+                if is_big_o(tok_out):
+                    lem_out = tok_out
+                final_tokens.append(tok_out)
+                final_lemmas.append(lem_out)
+                final_pos.append(item["pos"] if not is_big_o(tok_out) else "SYM")
                 final_langs.append("en")
 
         else:
