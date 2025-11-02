@@ -7,11 +7,13 @@ responses = []
 
 while True:
     try:
-        dataset = pd.read_json("../data/raw/codeswitch_v01.json")
+        dataset = pd.read_json("data/raw/codeswitch_v01.json")
     except:
         dataset = pd.DataFrame({})
-    if len(dataset) > 10:
+    if len(dataset) >= 1:
+        print("here")
         break
+
     prompt1 = """
     Act as a 30 year old male software engineer from India working for Microsoft who can speak English and Hindi.
     You are talking to your 45 year old male manager who is a lead software engineer also from India. You guys are speaking
@@ -54,18 +56,18 @@ while True:
     Make person 1 have the first code switch. Highlight the code switch as tag switching.
     """
 
-    specficiations = "Average between 10-12 conversations per turn "
-    specficiations += "simulate a natural billingual conversation "
-    specficiations += "structure the result conversation to only include periods at the end of a sentence "
+    specficiations = "Average between 10-12 conversations per turn, "
+    specficiations += "simulate a natural billingual conversation, "
+    specficiations += "structure the result conversation to only include periods at the end of a sentence, "
     specficiations += "only return the conversation, have it in a format similar to speaker: sentence, do not include anything else."
                     
     people = [
         "concerned mother",
-        "software engineer",
+        "software engineer at Microsoft",
         "student at northeastern university",
-        "professor",
-        "project manager",
-        "son studying for test",
+        "algorithms professor",
+        "project manager on AWS",
+        "son studying for math test",
         "student in a struggling group project",
     ]
 
@@ -75,19 +77,18 @@ while True:
             if i == j:
                 continue
 
-        for prompt in prompts:
-            prompt += specficiations
-            prompt += f"person1: {v}\n"
-            prompt += f"person2: {val}"
-        
-
-
-
-
+        for base in prompts:
+            prompt = (
+                base
+                + specficiations
+                + f"person1: {v}\n"
+                + f"person2: {val}"
+            )
             response = generate_content_with_retries(prompt=prompt)
             responses.append(response)
 
-        row = pd.DataFrame({"response":response})
-        dataset.append(row)
-        dataset.to_json("../raw/codeswitch_v01.json")
+            row = pd.DataFrame([{"response": response}])  # wrap in list -> one-row DF
+            dataset = pd.concat([dataset, row], ignore_index=True)  # append correctly
+            dataset.to_json("data/raw/codeswitch_v01.json", orient="records", indent=2)  # fix path + nice formatting
+
 

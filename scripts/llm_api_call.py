@@ -43,7 +43,7 @@ def make_api_call(client, prompt):
     # makes the api call and returns the content of the response
     completion = client.chat.completions.create(
     extra_body={},
-    model="nvidia/nemotron-nano-9b-v2:free",
+    model="minimax/minimax-m2:free",
     messages=[
         {
         "role": "user",
@@ -87,10 +87,3 @@ def generate_content_with_retries(prompt):
                 return None
 
     return None
-
-if __name__ == "__main__":
-    prompt = "Generate a conversation between two friends discussing their favorite movies." \
-    "Make each sentence have a code switch between English and Arabic. Return the arabic words in arabic characters."
-    response = generate_content_with_retries(prompt)
-    print("----------------- LLM Response: -----------------")
-    print(response)
