@@ -61,10 +61,10 @@ while True:
     specficiations += "simulate a natural billingual conversation, "
     specficiations += "structure the result conversation to only include periods at the end of a sentence, "
     specficiations += "only return the conversation, have it in a format similar to speaker: sentence, do not include anything else."
-    specficiations += "Only code switch in approximately 1 out of 3 sentences."                
+    specficiations += "Only code switch in approximately 1 out of 3 sentences."
+    specficiations += "generate all hindi words using the english alphabet"            
     
     people = [
-        "concerned mother who works in a computer science related field",
         "software engineer at Microsoft",
         "student at northeastern university",
         "algorithms professor",
@@ -87,8 +87,8 @@ while True:
                 prompt = (
                     base
                     + specficiations
-                    + f"person1: {v}\n"
-                    + f"person2: {val}"
+                    + f"person1 is {v}\n"
+                    + f"person2 is {val}"
                 )
                 response = generate_content_with_retries(prompt=prompt)
                 responses.append(response)
