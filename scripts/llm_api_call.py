@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import time
 import logging
+import pandas as pd
 
 # Set up logging configuration
 logging.basicConfig(
