@@ -10,10 +10,11 @@ while True:
         dataset = pd.read_json("data/raw/codeswitch_v01.json")
     except:
         dataset = pd.DataFrame({})
-    if len(dataset) >= 1:
+    if len(dataset) >= 10:
         print("here")
         break
-
+    print(dataset)
+    print(len(dataset))
     prompt1 = """
     Act as a 30 year old male software engineer from India working for Microsoft who can speak English and Hindi.
     You are talking to your 45 year old male manager who is a lead software engineer also from India. You guys are speaking
@@ -52,7 +53,7 @@ while True:
     prompt3 = """
     You are an international student from India. You are talking to person 2 in your
     AI class about the upcoming midterm on searching algorithms. You both speak English and Hindi.
-    Generate a conversation between the student and professor.
+    Generate a conversation between the 2 people.
     Make person 1 have the first code switch. Highlight the code switch as tag switching.
     """
 
@@ -60,9 +61,10 @@ while True:
     specficiations += "simulate a natural billingual conversation, "
     specficiations += "structure the result conversation to only include periods at the end of a sentence, "
     specficiations += "only return the conversation, have it in a format similar to speaker: sentence, do not include anything else."
-                    
+    specficiations += "Only code switch in approximately 1 out of 3 sentences."                
+    
     people = [
-        "concerned mother",
+        "concerned mother who works in a computer science related field",
         "software engineer at Microsoft",
         "student at northeastern university",
         "algorithms professor",
@@ -71,24 +73,32 @@ while True:
         "student in a struggling group project",
     ]
 
-    prompts = [prompt1,prompt2,prompt3]
+    prompts = {
+        prompt1:"intra_sentinal",
+        prompt2:"intra_sentinal",
+        prompt3:"tag_switching"
+    }
     for i,v in enumerate(people):
         for j,val in enumerate(people):
             if i == j:
                 continue
 
-        for base in prompts:
-            prompt = (
-                base
-                + specficiations
-                + f"person1: {v}\n"
-                + f"person2: {val}"
-            )
-            response = generate_content_with_retries(prompt=prompt)
-            responses.append(response)
+            for base,type in prompts.items():
+                prompt = (
+                    base
+                    + specficiations
+                    + f"person1: {v}\n"
+                    + f"person2: {val}"
+                )
+                response = generate_content_with_retries(prompt=prompt)
+                responses.append(response)
 
-            row = pd.DataFrame([{"response": response}])  # wrap in list -> one-row DF
-            dataset = pd.concat([dataset, row], ignore_index=True)  # append correctly
-            dataset.to_json("data/raw/codeswitch_v01.json", orient="records", indent=2)  # fix path + nice formatting
+                row = pd.DataFrame([{"utterance": response,
+                                    "generation_strategy":type,
+                                    "source":"LLM",
+                                    "metadata":["minimax/minimax-m2:free",prompt],
+                                    "id":len(dataset)}])  # wrap in list -> one-row DF
+                dataset = pd.concat([dataset, row], ignore_index=True)  # append correctly
+                dataset.to_json("data/raw/codeswitch_v01.json", orient="records", indent=2)  # fix path + nice formatting
 
 
