@@ -118,7 +118,7 @@ def process_codeswitch_data(input_json_path, output_json_path):
 if __name__ == "__main__":
     # Set your paths here
     input_path = "data/raw/codeswitch_v01.json"
-    output_path = "data/processed/codeswitch_v01.json"
+    output_path = "data/processed/codeswitch_by_sentences_v01.csv"
     
     # Create output directory if it doesn't exist
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

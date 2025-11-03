@@ -10,9 +10,7 @@ while True:
         dataset = pd.read_json("data/raw/codeswitch_v01.json")
     except:
         dataset = pd.DataFrame({})
-    if len(dataset) >= 10:
-        print("here")
-        break
+
     print(dataset)
     print(len(dataset))
     prompt1 = """
@@ -105,5 +103,7 @@ while True:
                                     "id":len(dataset)}])  # wrap in list -> one-row DF
                 dataset = pd.concat([dataset, row], ignore_index=True)  # append correctly
                 dataset.to_json("data/raw/codeswitch_v01.json", orient="records", indent=2)  # fix path + nice formatting
+
+    break
 
 
