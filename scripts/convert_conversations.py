@@ -86,7 +86,6 @@ def process_codeswitch_data(input_json_path, output_json_path):
     # Create DataFrame
     df = pd.DataFrame(all_rows)
 
-    df.drop()
     
     print(f"\nCreated {len(df)} utterance rows from {len(data)} conversations")
     print(f"Average utterances per conversation: {len(df)/len(data):.2f}")
