@@ -5,8 +5,8 @@ from pathlib import Path
 
 def split_utterances(conversation_text):
     """
-    Split conversation into individual utterances (sentences per speaker).
-    Returns list of dicts with speaker and utterance.
+    Split conversation into individual utterances (speaker turns).
+    Returns list of dicts with speaker and utterance (full turn, no sentence splitting).
     """
     utterances = []
     
@@ -20,22 +20,15 @@ def split_utterances(conversation_text):
             
         # Check if line has speaker format (Speaker: text or person1: text)
         if ':' in line:
-            parts = line.split(':', 1)
-            if len(parts) == 2:
-                speaker = parts[0].strip()
-                text = parts[1].strip()
-                
-                # Split the text into sentences (by period)
-                # Handle multiple periods, question marks, exclamation marks
-                sentences = re.split(r'[.!?]+', text)
-                
-                for sentence in sentences:
-                    sentence = sentence.strip()
-                    if sentence:  # Only add non-empty sentences
-                        utterances.append({
-                            'speaker': speaker,
-                            'utterance': sentence
-                        })
+            speaker, text = line.split(':', 1)
+            speaker = speaker.strip()
+            text = text.strip()
+
+            # Emit one row per speaker turn (no sentence splitting)
+            utterances.append({
+                'speaker': speaker,
+                'utterance': text
+            })
     
     return utterances
 
