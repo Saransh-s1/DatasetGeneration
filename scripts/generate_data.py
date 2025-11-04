@@ -77,7 +77,7 @@ while True:
     ]
 
     prompts = {
-        prompt1:"intra_sentinal",
+        prompt1:"inter_sentinal",
         prompt2:"intra_sentinal",
         prompt3:"tag_switching"
     }
