@@ -137,10 +137,12 @@ if __name__ == "__main__":
         while total_generations < 178:
 
             # try each combination of people
+            # 6 people x 5 other people = 30 conversations
             for p1, p2 in permutations(people, 2):
                 persona = generate_person(p1, p2)
 
                 # for each combination of people, generate a conversation for each code-switch type
+                # 3 prompts x 30 conversations = 90 conversations per iteration
                 for strategy_name, base_prompt in prompts.items():
 
                     # construct the full prompt
