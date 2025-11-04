@@ -3,7 +3,7 @@ from itertools import permutations
 import pandas as pd
 import logging
 
-DATASET_PATH = "data/raw/codeswitch_v01.json"
+DATASET_PATH = "data/raw/codeswitch_v02.json"
 
 # Set up logging configuration
 logging.basicConfig(
