@@ -85,6 +85,8 @@ def process_codeswitch_data(input_json_path, output_json_path):
     
     # Create DataFrame
     df = pd.DataFrame(all_rows)
+
+    df.drop()
     
     print(f"\nCreated {len(df)} utterance rows from {len(data)} conversations")
     print(f"Average utterances per conversation: {len(df)/len(data):.2f}")
@@ -117,8 +119,8 @@ def process_codeswitch_data(input_json_path, output_json_path):
 # Example usage
 if __name__ == "__main__":
     # Set your paths here
-    input_path = "data/raw/codeswitch_v01.json"
-    output_path = "data/processed/codeswitch_by_sentences_v01.csv"
+    input_path = "data/raw/codeswitch_v02.json"
+    output_path = "data/processed/codeswitch_by_sentences_v02.csv"
     
     # Create output directory if it doesn't exist
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

@@ -330,8 +330,8 @@ def process_file(
 # =========
 if __name__ == "__main__":
     # Change these paths as needed
-    input_path = "data/processed/codeswitch_by_sentences_v01.csv"
-    output_path = "data/processed/sentences_with_tags.csv"
+    input_path = "data/processed/codeswitch_by_sentences_v02.csv"
+    output_path = "data/processed/sentences_with_tags_v02.csv"
  
     df = process_file(input_path, output_path, text_col="utterance")
     print(len(df[df["is_code_switched"] == True]))
