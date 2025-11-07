@@ -1,8 +1,8 @@
 import pandas as pd
 
 # --- Hardcoded settings ---
-INPUT_CSV = "../data/processed/sentences_with_tags_v02.csv"
-OUTPUT_CSV = "../data/processed/final_dataset_v01.csv"
+INPUT_CSV = "data/processed/sentences_with_tags_v02.csv"
+OUTPUT_CSV = "data/processed/final_dataset_v01.csv"
 SPEAKER_COL = "speaker"
 UTTERANCE_COL = "utterance"
 # --------------------------
